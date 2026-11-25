@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Predicting Tennis Match Outcomes Using Machine Learning</title>
+  <meta name="description" content="Leakage-free ATP tennis match outcome prediction (2018-2026) comparing Elo ratings, logistic regression, random forests, gradient boosting, and neural networks." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>Tennis Match ML Blog</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#introduction">Introduction</a>
+        <a href="#dataset">Dataset &amp; EDA</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#evaluation">Evaluation</a>
+        <a href="#case-studies">Case Studies</a>
+        <a href="#conclusion">Conclusion</a>
+      </nav>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn-ghost" type="button">Dark Mode</button>
+        <a class="btn-ghost" href="https://github.com/Popi689/Predicting-Tennis-Match-Outcomes-Using-Machine-Learning" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-inner">
+      <div class="badges">
+        <span class="badge badge-green">ATP Tour 2018–2026</span>
+        <span class="badge">Leakage-Free Temporal Split</span>
+        <span class="badge">23,110 Played Matches</span>
+        <span class="badge">6 Models &amp; Baselines</span>
+      </div>
+      <h1>Predicting Tennis Match Outcomes Using Machine Learning</h1>
+      <p class="hero-subtitle">
+        Can pre-match Elo ratings, surface specialization, and rolling serve/return statistics outperform official ATP rankings on unseen seasons—without relying on betting odds? We test four ML model families chronologically across 4,359 holdout matches from 2025–2026.
+      </p>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Best Holdout Accuracy</div>
+          <div class="kpi-value">65.57%</div>
+          <div class="kpi-sub">Logistic Regression (+1.59 pts vs. ATP Rank)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Best Holdout ROC-AUC</div>
+          <div class="kpi-value">0.7187</div>
+          <div class="kpi-sub">Log Loss 0.6136 · Brier 0.2134</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Best-of-5 Accuracy</div>
+          <div class="kpi-value">72.06%</div>
+          <div class="kpi-sub">Grand Slam matches (n=766 in 2025–2026)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Dataset Coverage</div>
+          <div class="kpi-value">23,110</div>
+          <div class="kpi-sub">Matches across 1,080 ATP players (2018–2026)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="page-layout">
+    <aside class="toc-sidebar" aria-label="Table of Contents">
+      <div class="toc-title">On This Page</div>
+      <ul class="toc-list">
+        <li><a href="#team">Team &amp; Project Info</a></li>
+        <li><a href="#introduction">I. Introduction</a></li>
+        <li><a href="#dataset">II. Dataset &amp; EDA</a></li>
+        <li><a href="#methodology">III. Methodology</a></li>
+        <li><a href="#evaluation">IV. Evaluation &amp; Analysis</a></li>
+        <li><a href="#case-studies">V. Grand Slam Finals</a></li>
+        <li><a href="#conclusion">VI. Related Work &amp; Conclusion</a></li>
+      </ul>
+    </aside>
+
+    <article class="article">
+      <!-- Team -->
+      <section class="section-card" id="team">
+        <span class="section-tag">Project Metadata</span>
+        <h2>Team &amp; Repository Overview</h2>
+        <p>
+          This research blog documents an end-to-end, reproducible machine learning pipeline for forecasting men's professional singles tennis matches prior to first serve. Replace the placeholder member entries below with your team's details before final submission.
+        </p>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-name">Member 1 (Update Name)</div>
+            <div class="team-role">Data Pipeline &amp; Feature Engineering</div>
+            <div class="team-meta">GitHub: @Popi689 · Course / Dept Placeholder</div>
+          </div>
+          <div class="team-card">
+            <div class="team-name">Member 2 (Update Name)</div>
+            <div class="team-role">Modeling, Calibration &amp; Blog</div>
+            <div class="team-meta">Department / Email Placeholder</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- I. Introduction -->
+      <section class="section-card" id="introduction">
+        <span class="section-tag">Section I</span>
+        <h2>I. Introduction</h2>
+        <h3>1.1 Background &amp; Motivation</h3>
+        <p>
+          Tennis is uniquely well-suited for predictive modeling: every match produces a binary winner without draws, and players compete year-round across distinct surfaces (hard, clay, and grass) under different match formats (Best-of-3 vs. Best-of-5). Yet naive models frequently overestimate their true predictive power by leaking future information—either by splitting matches randomly across years or by including post-match box-score statistics (such as aces or break points converted) as inputs.
+        </p>
+        <p>
+          Our goal in this project is to build a <strong>strictly leakage-free pre-match prediction system</strong> using only historical information available before a match begins, and without relying on external bookmaker odds.
+        </p>
+
+        <h3>1.2 Research Questions</h3>
+        <ol>
+          <li><strong>Beyond Official Rankings:</strong> How much predictive lift do dynamic Elo ratings (overall + surface-specific) and rolling serve/return metrics add over a static ATP ranking baseline?</li>
+          <li><strong>Linear vs. Non-Linear Models:</strong> Do tree ensembles (Random Forest, HistGradientBoosting) or neural networks outperform well-regularized Logistic Regression on symmetric pairwise tennis features?</li>
+          <li><strong>Surface &amp; Format Dynamics:</strong> How strongly do court surface (Hard, Clay, Grass) and match length (Best-of-3 vs. Best-of-5) alter predictability and upset rates?</li>
+        </ol>
+
+        <div class="callout">
+          <span class="callout-title">Key Takeaway Up Front</span>
+          On <strong>4,359 unseen ATP matches (2025–2026)</strong>, an L2-regularized Logistic Regression trained on pre-match Elo, log ATP points, rolling form, and return efficiency achieves <strong>65.57% accuracy</strong> and <strong>0.7187 ROC-AUC</strong> (Log Loss <strong>0.6136</strong>)—beating both the ATP Rank baseline (63.98%, Log Loss 0.6455) and Pure Elo (63.94%, Log Loss 0.6317), while reaching <strong>72.06% accuracy</strong> in Best-of-5 Grand Slam matches.
+        </div>
+      </section>
+
+      <!-- II. Dataset & EDA -->
+      <section class="section-card" id="dataset">
+        <span class="section-tag">Section II</span>
+        <h2>II. Dataset &amp; Exploratory Data Analysis</h2>
+        <h3>2.1 Data Source &amp; Cleaning</h3>
+        <p>
+          We use nine seasons of ATP Tour main-draw singles match records spanning <strong>2018 through 2026</strong> (sourced from the archival ATP match dataset matching Jeff Sackmann's schema). Across the raw files, we observe <strong>23,270</strong> scheduled matches. Because unplayed walkovers (<code>W/O</code>) and pre-match defaults (<code>DEF</code>) contain no court performance statistics and reflect withdrawals rather than match play, we filter out <strong>160</strong> walkovers/defaults, leaving <strong>23,110 played matches</strong> covering <strong>1,080 unique ATP players</strong>.
+        </p>
+        <ul>
+          <li><strong>Chronological Ordering:</strong> Matches are sorted strictly by tournament start date, tournament ID, round hierarchy (<code>ER &lt; RR &lt; R128 &lt; R64 &lt; R32 &lt; R16 &lt; QF &lt; SF &lt; BR &lt; F</code>), and match number.</li>
+          <li><strong>Zero Post-Match Leakage:</strong> Box-score stats (aces, double faults, 1st serve %, return points won) from match <em>t</em> are never used to predict match <em>t</em>; they only update a player's rolling history for match <em>t+1</em> onward.</li>
+        </ul>
+
+        <h3>2.2 Exploratory Findings: Surface &amp; Match Format Effects</h3>
+        <p>
+          Across 2019–2026, official ATP rankings alone exhibit clear structural patterns. Higher-ranked players win <strong>64.51%</strong> of matches on Grass (n=1,902) and <strong>64.03%</strong> on Hard courts (n=12,064), compared to <strong>62.82%</strong> on Clay (n=6,219). Even sharper is the gap across tournament tiers: in Best-of-5 Grand Slams (n=3,661), the higher-ranked player wins <strong>69.82%</strong> of the time, versus <strong>62.80%</strong> in Masters 1000 events and <strong>61.61%</strong> in ATP 250/500 events—consistent with the law of large numbers over longer matches.
+        </p>
+
+        <div class="figure-card">
+          <img src="assets/figures/eda_surface_upsets.png" alt="Higher-ranked player win rate by surface and tournament tier" />
+          <div class="figure-caption">
+            <strong>Figure 1.</strong> Empirical higher-ranked win rate across court surfaces (left) and tournament tiers (right) from 2019–2026. Best-of-5 Grand Slams substantially reduce upset variance compared to Best-of-3 tour events. (Click image to zoom.)
+          </div>
+        </div>
+
+        <div class="figure-card">
+          <img src="assets/figures/eda_rank_vs_winrate.png" alt="Win rate as a function of pre-match Elo difference and log rank difference" />
+          <div class="figure-caption">
+            <strong>Figure 2.</strong> Empirical Player A win probability binned across pre-match Elo difference (left) and log ATP rank advantage (right). Both relationships follow a smooth, monotonic S-curve, explaining why logistic-link models calibrate naturally.
+          </div>
+        </div>
+      </section>
+
+      <!-- III. Methodology -->
+      <section class="section-card" id="methodology">
+        <span class="section-tag">Section III</span>
+        <h2>III. Leakage-Free Methodology &amp; Feature Engineering</h2>
+        <h3>3.1 Symmetrized Pairwise Framing</h3>
+        <p>
+          Raw ATP records list columns as <code>winner_*</code> and <code>loser_*</code>. Feeding those directly into a classifier would leak the label. For each match, we randomly assign the winner to either <strong>Player A</strong> (<code>target = 1</code>) or <strong>Player B</strong> (<code>target = 0</code>) with equal 50% probability (seeded for exact reproducibility), and express all player features as differences: <code>Feature(A) − Feature(B)</code>.
+        </p>
+
+        <h3>3.2 Chronological Pre-Match Feature Groups (28 Features)</h3>
+        <div class="feature-grid">
+          <div class="feature-box">
+            <h4>Dynamic Elo &amp; Rankings</h4>
+            <ul>
+              <li>Overall Elo diff (tier-weighted K: 36 Slam, 32 Masters, 28 Tour)</li>
+              <li>Surface-specific Elo diff (Hard, Clay, Grass; K=30)</li>
+              <li>Blended Elo (60% overall + 40% surface)</li>
+              <li>Pre-tournament log ATP rank &amp; log ATP points diff</li>
+            </ul>
+          </div>
+          <div class="feature-box">
+            <h4>Rolling Form &amp; Rivalries</h4>
+            <ul>
+              <li>Smoothed win rates over last 10 &amp; 25 matches</li>
+              <li>Surface-specific win rate over last 15 matches</li>
+              <li>Career smoothed win rate &amp; tour experience (log matches)</li>
+              <li>Prior Head-to-Head (H2H) win differential</li>
+            </ul>
+          </div>
+          <div class="feature-box">
+            <h4>Serve &amp; Return Efficiency</h4>
+            <ul>
+              <li>15-match rolling ace rate &amp; double-fault rate</li>
+              <li>1st serve in %, 1st serve won %, 2nd serve won %</li>
+              <li>Break points saved % (Laplace-smoothed prior)</li>
+              <li>Return points won % against opponents</li>
+            </ul>
+          </div>
+          <div class="feature-box">
+            <h4>Workload &amp; Match Context</h4>
+            <ul>
+              <li>Matches already played in current tournament</li>
+              <li>21-day recent match workload</li>
+              <li>Age diff, height diff, left-handed matchup flag</li>
+              <li>Surface flags (Clay, Grass), Best-of-5, Slam/Masters</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>3.3 Strict Temporal Evaluation Protocol</h3>
+        <p>
+          To mirror real-world forecasting, we never shuffle across years. Season <strong>2018</strong> serves purely as a cold-start warm-up to stabilize Elo ratings and rolling statistics before any training sample is recorded.
+        </p>
+        <div class="split-bar" aria-label="Temporal dataset split">
+          <div class="split-segment seg-warm">
+            <strong>2018 Warm-Up</strong>
+            2,883 matches<br />Elo &amp; history burn-in
+          </div>
+          <div class="split-segment seg-train">
+            <strong>2019–2023 Train</strong>
+            12,814 matches<br />Feature scaling &amp; fitting
+          </div>
+          <div class="split-segment seg-val">
+            <strong>2024 Validation</strong>
+            3,054 matches<br />Hyperparameter tuning
+          </div>
+          <div class="split-segment seg-test">
+            <strong>2025–2026 Test</strong>
+            4,359 matches<br />Untouched holdout eval
+          </div>
+        </div>
+      </section>
+
+      <!-- IV. Evaluation -->
+      <section class="section-card" id="evaluation">
+        <span class="section-tag">Section IV</span>
+        <h2>IV. Model Evaluation &amp; Analysis</h2>
+        <h3>4.1 Overall Benchmark Comparison</h3>
+        <p>
+          We compare four ML families tuned on 2024 validation log loss (and refitted on 2019–2024 before final evaluation) against two transparent baselines: an ATP Rank logistic baseline and a Pure Elo probability baseline (<code>1 / (1 + 10^(-ΔElo/400))</code>). Use the toggle below to switch between the 2025–2026 Holdout Test Set and the 2024 Validation Set.
+        </p>
+
+        <div class="table-controls">
+          <div class="segmented" role="tablist" aria-label="Evaluation Split">
+            <button type="button" class="active" data-split-btn="test">Holdout Test (2025–2026)</button>
+            <button type="button" data-split-btn="val">Validation (2024)</button>
+          </div>
+          <span id="splitCaption" style="font-size:0.84rem; color:var(--text-muted);">Showing 2025–2026 Holdout Test Set (4,359 played ATP matches)</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Family / Config</th>
+                <th>Accuracy ↑</th>
+                <th>ROC-AUC ↑</th>
+                <th>Log Loss ↓</th>
+                <th>Brier Score ↓</th>
+              </tr>
+            </thead>
+            <tbody id="metricsTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="figure-card">
+          <img src="assets/figures/model_comparison.png" alt="Model comparison bar chart across Accuracy, ROC-AUC, and Log Loss" />
+          <div class="figure-caption">
+            <strong>Figure 3.</strong> Holdout test comparison (2025–2026, n=4,359). All four ML models outperform both ATP Rank and Pure Elo across every metric, with L2 Logistic Regression (C=0.01) achieving the lowest log loss (0.6136) and highest ROC-AUC (0.7187).
+          </div>
+        </div>
+
+        <h3>4.2 Probability Calibration &amp; ROC Curves</h3>
+        <p>
+          In sports forecasting, raw accuracy only tells half the story—well-calibrated probabilities matter just as much. Logistic Regression achieves the lowest Brier Score (<strong>0.2134</strong>) and tracks the diagonal calibration line closely from 15% underdogs up to 85% heavy favorites. Notably, HistGradientBoosting ties Logistic Regression in classification accuracy (<strong>65.57%</strong>) but has slightly higher log loss (0.6168 vs. 0.6136), reflecting mild overconfidence in tree leaves on noisy upsets.
+        </p>
+
+        <div class="figure-card">
+          <img src="assets/figures/roc_and_calibration.png" alt="ROC curves and probability calibration curves on 2025-2026 test set" />
+          <div class="figure-caption">
+            <strong>Figure 4.</strong> ROC curves (left) and 10-bin quantile calibration curves (right) evaluated on the 2025–2026 holdout test set.
+          </div>
+        </div>
+
+        <h3>4.3 What Drives Predictions? (Permutation Importance)</h3>
+        <p>
+          Permuting features on the holdout test set reveals that the model relies on a complementary blend of <strong>long-term ranking strength</strong> (<code>Log ATP Points Diff</code>), <strong>surface-specific form</strong> (<code>Surface Elo Diff</code>), <strong>medium-term momentum</strong> (<code>Last-25 Form Diff</code>), <strong>physical age curve</strong> (<code>Age Diff</code>), and <strong>return game quality</strong> (<code>Return Points Won % Diff</code>).
+        </p>
+
+        <div class="figure-card">
+          <img src="assets/figures/feature_importance.png" alt="Top 12 pre-match features by permutation importance" />
+          <div class="figure-caption">
+            <strong>Figure 5.</strong> Top 12 pre-match features ranked by mean increase in test log loss when randomly permuted (8 repeats). Surface Elo contributes more than 3× the marginal signal of raw Overall Elo once ATP points and blended Elo are present.
+          </div>
+        </div>
+
+        <h3>4.4 Surface &amp; Match Format Breakdown</h3>
+        <div class="figure-card">
+          <img src="assets/figures/surface_accuracy_breakdown.png" alt="Test accuracy breakdown by court surface and Best-of-3 vs Best-of-5" />
+          <div class="figure-caption">
+            <strong>Figure 6.</strong> Holdout accuracy by court surface (left) and match format (right). Logistic Regression improves over Pure Elo by +2.26 percentage points on Hard courts (66.14% vs. 63.88%) and +1.41 pts on Clay (64.67% vs. 63.26%). On Grass (n=298), the smaller sample yields higher variance where Pure Elo edges ahead (67.79% vs. 65.10%). Across formats, Best-of-5 matches reach 72.06% accuracy versus 64.18% in Best-of-3.
+          </div>
+        </div>
+      </section>
+
+      <!-- V. Case Studies -->
+      <section class="section-card" id="case-studies">
+        <span class="section-tag">Section V</span>
+        <h2>V. Real Holdout Case Studies: 2025–2026 Grand Slam Finals</h2>
+        <p>
+          To inspect model behavior on high-stakes matches, below are the untouched pre-match predictions from our Logistic Regression model across six Grand Slam finals in the 2025–2026 test set. Notice how the model thrives when ranking/surface gaps are clear (e.g., Sinner vs. Zverev at AO 2025, Zverev vs. Cobolli at RG 2026) and flags elite Top-2 rivalries like Sinner vs. Alcaraz as near coin flips (50.0%–58.1%).
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tournament</th>
+                <th>Surface</th>
+                <th>Matchup (Ranks)</th>
+                <th>Actual Score</th>
+                <th>Model Pick (Prob.)</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2025 Australian Open</td>
+                <td><span class="pill pill-surface">Hard</span></td>
+                <td><strong>Jannik Sinner (#1)</strong> def. Alexander Zverev (#2)</td>
+                <td>6-3 7-6(4) 6-3</td>
+                <td>Jannik Sinner (69.66%)</td>
+                <td><span class="pill pill-hit">Correct</span></td>
+              </tr>
+              <tr>
+                <td>2025 Roland Garros</td>
+                <td><span class="pill pill-surface">Clay</span></td>
+                <td><strong>Carlos Alcaraz (#2)</strong> def. Jannik Sinner (#1)</td>
+                <td>4-6 6-7(4) 6-4 7-6(3) 7-6(2)</td>
+                <td>Carlos Alcaraz (50.02%)</td>
+                <td><span class="pill pill-hit">Correct</span></td>
+              </tr>
+              <tr>
+                <td>2025 Wimbledon</td>
+                <td><span class="pill pill-surface">Grass</span></td>
+                <td><strong>Jannik Sinner (#1)</strong> def. Carlos Alcaraz (#2)</td>
+                <td>4-6 6-4 6-4 6-4</td>
+                <td>Carlos Alcaraz (54.84%)</td>
+                <td><span class="pill pill-miss">Missed</span></td>
+              </tr>
+              <tr>
+                <td>2025 US Open</td>
+                <td><span class="pill pill-surface">Hard</span></td>
+                <td><strong>Carlos Alcaraz (#2)</strong> def. Jannik Sinner (#1)</td>
+                <td>6-2 3-6 6-1 6-4</td>
+                <td>Jannik Sinner (58.07%)</td>
+                <td><span class="pill pill-miss">Missed</span></td>
+              </tr>
+              <tr>
+                <td>2026 Australian Open</td>
+                <td><span class="pill pill-surface">Hard</span></td>
+                <td><strong>Carlos Alcaraz (#1)</strong> def. Novak Djokovic (#4)</td>
+                <td>2-6 6-2 6-3 7-5</td>
+                <td>Carlos Alcaraz (74.62%)</td>
+                <td><span class="pill pill-hit">Correct</span></td>
+              </tr>
+              <tr>
+                <td>2026 Roland Garros</td>
+                <td><span class="pill pill-surface">Clay</span></td>
+                <td><strong>Alexander Zverev (#3)</strong> def. Flavio Cobolli (#14)</td>
+                <td>6-1 4-6 6-4 6-7(5) 6-1</td>
+                <td>Alexander Zverev (78.88%)</td>
+                <td><span class="pill pill-hit">Correct</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VI. Conclusion -->
+      <section class="section-card" id="conclusion">
+        <span class="section-tag">Section VI</span>
+        <h2>VI. Related Work, Limitations &amp; Reproducibility</h2>
+        <h3>6.1 Context in Sports Analytics</h3>
+        <p>
+          Prior tennis prediction literature (including Kovalchik's benchmark comparisons of ATP rating systems and Sackmann-based Elo/ML pipelines) consistently finds that well-calibrated Elo and logistic models set a strong accuracy ceiling around 65%–68% when betting market odds are excluded, because bookmaker lines implicitly price late-breaking injury news and matchup narratives unavailable in historical box scores.
+        </p>
+
+        <h3>6.2 Key Limitations</h3>
+        <ul>
+          <li><strong>Unobserved Injuries &amp; Fatigue Context:</strong> Pre-match box scores cannot capture minor knocks, illness, or motivation fluctuations right before a match.</li>
+          <li><strong>Short Grass Season Sample:</strong> Because Grass accounts for only ~8% of tour matches (298 test matches in 2025–2026), surface-specific serve/return rolling stats have fewer recent observations entering Wimbledon.</li>
+          <li><strong>No Betting-Market Signal:</strong> Intentionally omitted to test pure performance fundamentals; adding closing odds would raise accuracy further but shifts the task from sports modeling to market distillation.</li>
+        </ul>
+
+        <h3>6.3 Reproducing the Results Locally</h3>
+        <pre class="code-block"><code>git clone https://github.com/Popi689/Predicting-Tennis-Match-Outcomes-Using-Machine-Learning.git
+cd Predicting-Tennis-Match-Outcomes-Using-Machine-Learning
+pip install -r requirements.txt
+python src/run_pipeline.py</code></pre>
+      </section>
+    </article>
+  </main>
+
+  <footer class="footer">
+    <p>
+      Predicting Tennis Match Outcomes Using Machine Learning · Built with Python, scikit-learn &amp; GitHub Pages · Dataset: ATP Tour Singles (2018–2026)
+    </p>
+  </footer>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Zoomed Figure">
+    <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close">&times;</button>
+    <div class="lightbox-content">
+      <img id="lightboxImg" src="" alt="" />
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
