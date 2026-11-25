@@ -12,8 +12,8 @@
 
 | Name | Role | GitHub / Contact |
 | :--- | :--- | :--- |
-| Member 1 *(Update Name)* | Data Pipeline & Feature Engineering | [@Popi689](https://github.com/Popi689) |
-| Member 2 *(Update Name)* | Modeling, Evaluation & Blog Site | *Update email / handle* |
+|Dylan GIAU | Data Pipeline & Feature Engineering | [@Popi689](https://github.com/Popi689) |
+| Nicolas SOUBEYRAN | Modeling, Evaluation & Blog Site | nicolas.soubeyran@orange.fr |
 
 ---
 
